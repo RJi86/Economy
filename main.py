@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-
-=======
 import discord
 from discord.ext import commands
 import json
@@ -244,4 +241,3 @@ async def deposit(ctx, amount = None):
     await ctx.send(f"You Deposited {amount} coins!")
 
 client.run(my_token)
->>>>>>> cb81b30 (First Commit)
