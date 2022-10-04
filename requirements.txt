@@ -1,3 +1,2 @@
-discord.py
+discord.py==3.5.6
 python-dotenv
-discord 
