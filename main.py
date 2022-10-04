@@ -18,7 +18,7 @@ mainshop = [{"name": "Coconut", "price":100, "description":"Yummy"},
 
 @client.event
 async def on_ready():
-    print("Ready")
+    print("Bot is up and running!")
 
 @client.command()
 async def balance(ctx):
