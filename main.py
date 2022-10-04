@@ -11,7 +11,8 @@ my_token = os.getenv("TOKEN")
 
 #os.chdir("C:/Users/richardji/Desktop/Economy")
 
-client = commands.Bot(command_prefix = "e!")
+intents = discord.Intents.all()
+client = commands.Bot(command_prefix = "e!", intents = intents)
 
 mainshop = [{"name": "Coconut", "price":100, "description":"Yummy"},
             {"name": "Cabbage", "price":1000, "description":"Becuz of Inflation"}]
