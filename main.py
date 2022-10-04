@@ -1,3 +1,4 @@
+from tempfile import TemporaryFile
 import discord
 from discord.ext import commands
 import json
@@ -13,6 +14,7 @@ my_token = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix = "e!", intents = intents)
+bot = commands.Bot(command_prefix = "e!", intents = discord.Intents.default())
 
 mainshop = [{"name": "Coconut", "price":100, "description":"Yummy"},
             {"name": "Cabbage", "price":1000, "description":"Becuz of Inflation"}]
@@ -45,12 +47,20 @@ async def shop(ctx):
         name = item["name"]
         price = item["price"]
         description = item["description"]
-        em.add_field(name = name, value = f"price : {price} | description: {description}")
+        em.add_field(name = name, value = f"${price} | {description}")
 
     await ctx.send(embed = em)
 
+@bot.event()
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        msg = "You can't use this command right now, try again in {:.2f}s".format(error.retry_after)
+        await ctx.send(msg)
+
 
 @client.command()
+@commands.cooldown(1, 300, commands.BucketType.user) #Rate, per, commands.BucketType
+
 async def beg(ctx):
     await open_account(ctx.author)
     user = ctx.author
@@ -67,12 +77,90 @@ async def beg(ctx):
     
 
 
-@client.command() #Not finished
+@client.command() 
 async def buy(ctx, item, amount = 1):
     await open_account(ctx.author)
 
     result = await buy_this(ctx.author, item, amount)
+
+    if not result[0]:
+        if result[1] == 1:
+            await ctx.send("That Object isn't there!")
+        if result[1] == 2:
+            await ctx.send(f"You don't have enough money in your wallet to buy {item}!")
+            return
     
+    await ctx.send(f"you just bought {amount} {item}!")
+    
+async def buy_this(user, item_name, amount):
+    item_name = item_name.lower()
+    name_ = None
+    for item in mainshop:
+        name = item["name"].lower()
+        if name == item_name:
+            name_ = name
+            price = item["price"]
+            break
+
+    if name_ == None:
+        return [False, 1] #Return error code 1
+
+    cost = price * amount
+
+    users = await get_bank_data()
+
+    if balance[0] < cost:
+        return [False, 2] #Return error code 2
+    
+    try:
+        index = 0
+        t = None #tracker 
+        for thing in users[str(user.id)]["bag"]:
+            n = thing["item"]
+            if n == item_name:
+                old_amt = thing["amount"]
+                new_amt = old_amt + amount
+                users[str(user.id)]["bag"][index]["amount"] = new_amt
+                t = 1
+                break
+            index += 1
+        if t == None:
+            obj = {"item":item_name, "amount" : amount}
+            users[str(user.id)]["bag"].append(obj)
+
+    except:
+        obj = {"item": item_name, "amount": amount}
+        users[str(user.id)]["bag"] = [obj]
+
+    with open("mainbank.json", "w") as f:
+        json.dump(users,f)
+    
+    await update_bank(user, cost * -1, "wallet")
+    
+    return [True, "Worked!"]
+
+
+@client.command()
+async def bag(ctx):
+    await open_account(ctx.author)
+    user = ctx.author
+    users = await get_bank_data()
+
+    try:
+        bag = users[str(user.id)]["bag"]
+    
+    except:
+        bag = []
+
+    em = discord.Embed(title = "Bag")
+
+    for item in bag:
+        name = item["item"]
+        amount = item["amount"]
+
+        em.add_field(name = name, value = amount)
+
+    await ctx.send(embed = em)
 
 async def open_account(user):
 
