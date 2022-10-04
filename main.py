@@ -14,7 +14,7 @@ my_token = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
 client = commands.Bot(command_prefix = "e!", intents = intents)
-bot = commands.Bot(command_prefix = "e!", intents = discord.Intents.default())
+bot = commands.Bot(command_prefix = "e!", intents = intents)
 
 mainshop = [{"name": "Coconut", "price":100, "description":"Yummy"},
             {"name": "Cabbage", "price":1000, "description":"Becuz of Inflation"}]
@@ -51,12 +51,11 @@ async def shop(ctx):
 
     await ctx.send(embed = em)
 
-@bot.event()
+@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
-        msg = "You can't use this command right now, try again in {:.2f}s".format(error.retry_after)
+        msg = 'You cannot use this command right now, try again in {:.2f}s'.format(error.retry_after)
         await ctx.send(msg)
-
 
 @client.command()
 @commands.cooldown(1, 300, commands.BucketType.user) #Rate, per, commands.BucketType
