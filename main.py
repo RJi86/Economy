@@ -21,6 +21,7 @@ mainshop = [{"name": "Coconut", "price":100, "description":"Yummy"},
 
 @client.event
 async def on_ready():
+    await client.change_presence(status = discord.Status.idle, activity = discord.Game('Economy Keeper'))
     print("Bot is up and running!")
 
 @client.command()
@@ -108,7 +109,8 @@ async def buy_this(user, item_name, amount):
 
     users = await get_bank_data()
 
-    if balance[0] < cost:
+    bal = await update_bank(user)
+    if bal[0] < cost:
         return [False, 2] #Return error code 2
     
     try:
@@ -194,8 +196,8 @@ async def update_bank(user, change = 0, mode = "wallet"):
     with open("mainbank.json", "w") as f:
         json.dump(users,f)
 
-    balance = [users[str(user.id)]["wallet"],users[str(user.id)]["bank"]]
-    return balance
+    bal = [users[str(user.id)]["wallet"],users[str(user.id)]["bank"]]
+    return bal
 
 
 @client.command()
@@ -205,10 +207,10 @@ async def withdraw(ctx, amount = None):
         await ctx.send("Please enter the amount")
         return
 
-    balance = await update_bank(ctx.author)
+    bal = await update_bank(ctx.author)
 
     amount = int(amount)
-    if amount > balance[1]:
+    if amount > bal[1]:
         await ctx.send("You Don't enough money!")
         return 
 
@@ -222,6 +224,87 @@ async def withdraw(ctx, amount = None):
 
     await ctx.send(f"You Withdrew {amount} coins!")
 
+@client.command() #Understand this code
+async def sell(ctx, item, amount = 1):
+    await open_account(ctx.author)
+
+    res = await sell_this(ctx.author,item,amount)
+
+    if not res[0]:
+        if res[1] == 1:
+            await ctx.send("That object isn't there!")
+        if res[1] == 2:
+            await ctx.send(f"You don't have {amount} {item} in your bag!")
+        if res[1] == 3:
+            await ctx.send(f"You don't have {item} in your bag!")
+            return
+    
+    await ctx.send(f"You just sold {amount} {item}.")
+
+async def sell_this(user,item_name, amount, price = None):
+    item_name = item_name.lower()
+    name_ = None
+    for item in mainshop:
+        name = item["name"].lower()
+        if name == item_name:
+            name_ = name
+            if price == None:
+                price = 0.7*item["price"]
+            break
+    
+    if name_ == None:
+        return [False, 1]
+
+    cost = price * amount
+
+    users = await get_bank_data()
+
+    bal = await update_bank(user)
+
+    try:
+        index = 9
+        t = None
+        for thing in users[str(user.id)]["bag"]:
+            n = thing["item"]
+            if n == item_name:
+                old_amt = thing["amount"]
+                new_amt = old_amt - amount
+                if new_amt < 0:
+                    return [False, 2]
+                users[str(user.id)]["bag"][index]["smount"] = new_amt
+                t = 1
+                break
+            index += 1
+        if t == None:
+            return [False, 3]
+    except:
+        return [False, 3]
+
+@client.command(aliases = ["lb"])
+async def leaderboard(ctx, x = 3):
+    users = await get_bank_data()
+    leader_board = {}
+    total = []
+    for user in users:
+        name = int(user)
+        total_amount = users[user]["wallet"] + user[user]["bank"]
+        leader_board[total_amount] = name
+        total.append(total_amount)
+
+    total = sorted(total, reverse = True)
+
+    em = discord.Embed(title = f"Top {x} Richest People", description = "Calculated through the money in the bank and wallet", color = discord.Color(0xfa43ee))
+    index = 1
+    for amt in total:
+        id_ = leader_board[amt]
+        mem = client.get_user(id_)
+        name = mem.name
+        em.add_field(name = f"{index}. {name}", value = f"{amt}", inline = False)
+        if index == x:
+            break
+        else:
+            index += 1 #Until here
+
 @client.command()
 async def send(ctx,member:discord.Member, amount = None):
     await open_account(ctx.author)
@@ -230,12 +313,12 @@ async def send(ctx,member:discord.Member, amount = None):
         await ctx.send("Please enter the amount")
         return
 
-    balance = await update_bank(ctx.author)
+    bal = await update_bank(ctx.author)
 
     if amount == "all":
-        amount = balance[0]
+        amount = bal[0]
     amount = int(amount)
-    if amount > balance[1]:
+    if amount > bal[1]:
         await ctx.send("You Don't enough money!")
         return 
 
@@ -253,13 +336,13 @@ async def rob(ctx,member:discord.Member):
     await open_account(ctx.author)
     await open_account(member)
 
-    balance = await update_bank(member)
+    bal = await update_bank(member)
 
-    if balance[0] < 1000:
+    if bal[0] < 1000:
         await ctx.send("It is not worth robbing!")
         return 
     
-    earnings = random.randrange(-1000, balance[0] - 204)
+    earnings = random.randrange(-1000, bal[0] - 204)
 
 
     await update_bank(ctx.author, earnings)
@@ -279,10 +362,10 @@ async def slots(ctx, amount = None):
         await ctx.send("Please enter the amount")
         return
 
-    balance = await update_bank(ctx.author)
+    bal = await update_bank(ctx.author)
 
     amount = int(amount)
-    if amount > balance[0]:
+    if amount > bal[0]:
         await ctx.send("You Don't enough money!")
         return 
 
@@ -312,10 +395,10 @@ async def deposit(ctx, amount = None):
         await ctx.send("Please enter the amount")
         return
 
-    balance = await update_bank(ctx.author)
+    bal = await update_bank(ctx.author)
 
     amount = int(amount)
-    if amount > balance[0]:
+    if amount > bal[0]:
         await ctx.send("You Don't enough money!")
         return 
 
